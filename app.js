@@ -9,7 +9,93 @@ const STORE_KEYS = {
   examsMirror: "examTimerData"
 };
 
+
+const CLOUD_KEYS = {
+  exams: "exams",
+  settings: "settings"
+};
 const DEFAULT_PASSWORD = "1234";
+let cloudDb = null;
+let cloudReady = false;
+let cloudListenersAttached = false;
+let cloudInitialLoadDone = false;
+let suppressCloudSave = false;
+let cloudStatusText = "";
+
+function hasFirebaseConfig(){
+  const cfg = window.FIREBASE_CONFIG;
+  return !!(cfg && cfg.apiKey && cfg.projectId && cfg.databaseURL);
+}
+function getCloudRef(path){
+  if (!cloudDb || !window.firebase) return null;
+  return window.firebase.database().ref(path);
+}
+function setCloudStatus(message){
+  cloudStatusText = message || "";
+  document.querySelectorAll("#cloudStatus,.cloud-status").forEach(el => el.textContent = cloudStatusText);
+}
+function initCloudSync(){
+  if (cloudListenersAttached) return;
+  if (!hasFirebaseConfig()) {
+    setCloudStatus("وضع محلي: لم يتم إعداد Firebase بعد؛ البيانات محفوظة على هذا المتصفح فقط.");
+    return;
+  }
+  if (!window.firebase || !window.firebase.database) {
+    setCloudStatus("تعذر تحميل Firebase. تحقق من اتصال الإنترنت أو إعدادات السكربت.");
+    return;
+  }
+  try {
+    if (!window.firebase.apps.length) window.firebase.initializeApp(window.FIREBASE_CONFIG);
+    cloudDb = window.firebase.database();
+    cloudReady = true;
+    cloudListenersAttached = true;
+    setCloudStatus("متصل بالمزامنة السحابية.");
+
+    getCloudRef(CLOUD_KEYS.exams).on("value", snap => {
+      const rows = snap.val();
+      if (Array.isArray(rows)) {
+        suppressCloudSave = true;
+        localStorage.setItem(STORE_KEYS.exams, JSON.stringify(rows));
+        localStorage.setItem(STORE_KEYS.examsMirror, JSON.stringify(rows));
+        localStorage.setItem("finalExamTimer.exams.updatedAt", String(Date.now()));
+        suppressCloudSave = false;
+        cloudInitialLoadDone = true;
+        refreshAllExams();
+        if (currentHall) renderHall(currentHall); else populateHalls();
+        updateStats();
+        populateEditDates();
+      }
+    });
+
+    getCloudRef(CLOUD_KEYS.settings).on("value", snap => {
+      const settings = snap.val() || {};
+      suppressCloudSave = true;
+      if (settings.password) localStorage.setItem(STORE_KEYS.password, String(settings.password));
+      if (settings.semester) localStorage.setItem(STORE_KEYS.semester, String(settings.semester));
+      if (settings.academicYear) localStorage.setItem(STORE_KEYS.academicYear, String(settings.academicYear));
+      if (settings.fileName) localStorage.setItem(STORE_KEYS.fileName, String(settings.fileName));
+      if (settings.updatedAt) localStorage.setItem("finalExamTimer.exams.updatedAt", String(settings.updatedAt));
+      suppressCloudSave = false;
+      setTitles();
+      updateDataFileInfo();
+      updateStats();
+    });
+  } catch (err) {
+    console.error(err);
+    cloudReady = false;
+    setCloudStatus("خطأ في الاتصال بالمزامنة السحابية. تحقق من firebase-config.js.");
+  }
+}
+function saveCloudExams(rows){
+  if (!cloudReady || suppressCloudSave) return;
+  try { getCloudRef(CLOUD_KEYS.exams).set(rows); }
+  catch (err) { console.error(err); setCloudStatus("تعذر حفظ البيانات سحابيًا."); }
+}
+function saveCloudSettings(partial){
+  if (!cloudReady || suppressCloudSave) return;
+  try { getCloudRef(CLOUD_KEYS.settings).update(partial); }
+  catch (err) { console.error(err); setCloudStatus("تعذر حفظ الإعدادات سحابيًا."); }
+}
 let allExams = [];
 let currentHall = "";
 let activePeriodExams = [];
@@ -77,10 +163,15 @@ function saveExams(rows, shouldNotify = true){
   localStorage.setItem(STORE_KEYS.examsMirror, payload);
   localStorage.setItem("finalExamTimer.exams.updatedAt", stamp);
   localStorage.setItem("examTimerData.updatedAt", stamp);
+  saveCloudExams(normalizedRows);
+  saveCloudSettings({ updatedAt: stamp });
   if (shouldNotify) notifyDataChanged();
 }
 function saveExamsWithMeta(rows, fileName = "", shouldNotify = true){
-  if (fileName) localStorage.setItem(STORE_KEYS.fileName, fileName);
+  if (fileName) {
+    localStorage.setItem(STORE_KEYS.fileName, fileName);
+    saveCloudSettings({ fileName });
+  }
   saveExams(rows, shouldNotify);
 }
 function getLastUpdateText(){
@@ -672,6 +763,7 @@ function initTermSettings(){
     if (!sem || !ay) return alert("يرجى اختيار الفصل الدراسي وإدخال العام الأكاديمي.");
     localStorage.setItem(STORE_KEYS.semester, sem);
     localStorage.setItem(STORE_KEYS.academicYear, ay);
+    saveCloudSettings({ semester: sem, academicYear: ay });
     setTitles();
     alert("تم حفظ إعدادات الفصل الدراسي.");
   });
@@ -690,6 +782,7 @@ function initAdmin(){
     else alert("رمز الدخول غير صحيح");
   });
   updateDataFileInfo();
+  setCloudStatus(cloudStatusText);
   document.getElementById("excelFile")?.addEventListener("change", handleExcelUpload);
   document.getElementById("replaceDataBtn")?.addEventListener("click", replaceCurrentData);
   document.getElementById("savePasswordBtn")?.addEventListener("click", () => {
@@ -701,6 +794,7 @@ function initAdmin(){
     if (np.length < 3) return alert("يرجى إدخال رقم سري جديد من 3 خانات على الأقل.");
     if (np !== cp) return alert("الرقم السري الجديد وتأكيده غير متطابقين.");
     localStorage.setItem(STORE_KEYS.password, np);
+    saveCloudSettings({ password: np });
     ["currentPassword","newPassword","confirmPassword"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
     alert("تم حفظ الرقم السري الجديد.");
   });
@@ -1006,6 +1100,7 @@ function showAppPage(){
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initCloudSync();
   attachAdminActivityWatchers();
   initDisplay();
   initAdmin();
