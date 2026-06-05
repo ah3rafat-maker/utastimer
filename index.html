@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مؤقت الامتحانات النهائية</title>
+  <link rel="stylesheet" href="style.css?v=30" />
+</head>
+<body class="display-page">
+  <main id="displayPage" class="display-shell">
+    <header class="main-header">
+      <div class="college-logo-wrap">
+        <img src="assets/logo.png" alt="شعار الكلية" class="college-logo" />
+      </div>
+      <div class="title-block">
+        <h1 id="pageTitle">الامتحانات النهائية</h1>
+        <p id="academicYearTitle"></p>
+      </div>
+      <div class="header-date-wrap">
+        <div id="dateLine" class="date-line"></div>
+        <div class="header-controls">
+          <button id="topHomeBtn" class="top-home-btn" type="button" title="الصفحة الرئيسية" aria-label="الصفحة الرئيسية"><span class="home-icon" aria-hidden="true"></span></button>
+          <a href="#admin" class="settings-link" title="الإعدادات" aria-label="الإعدادات"><span class="settings-icon" aria-hidden="true"></span></a>
+          <button id="fullScreenBtn" class="fullscreen-btn" type="button" title="ملء الشاشة" aria-label="ملء الشاشة">
+            <span class="fs-corners fs-open" aria-hidden="true"></span><span class="fs-corners fs-close hidden" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section id="setupPanel" class="setup-panel">
+      <label for="hallSelect">اختر القاعة</label>
+      <div class="select-row">
+        <select id="hallSelect"><option value="">اختر القاعة</option></select>
+      </div>
+      <p id="setupNote" class="soft-note"></p>
+    </section>
+
+    <section id="examView" class="exam-view hidden">
+      <div class="meta-row">
+        <div class="hall-badge"><span>القاعة:</span><strong id="hallName"></strong></div>
+        <div class="total-students-card"><span>العدد الكلي للطلبة:</span><strong id="totalStudents">0</strong></div>
+      </div>
+
+      <section id="courseCards" class="course-cards"></section>
+
+      <section class="timer-card">
+        <div class="timer-label">الوقت المتبقى</div>
+        <div id="timer" class="timer-value">00:00:00</div>
+        <div id="periodText" class="period-text"></div>
+      </section>
+    </section>
+
+    <section id="emptyState" class="empty-state hidden"><h2>لا توجد امتحانات نهائية في الوقت الحالي</h2></section>
+    <footer class="copyright">Dr. Ahmed Arafat © 2026</footer>
+  </main>
+
+  <section id="adminPage" class="admin-embedded hidden" aria-label="صفحة الإعدادات">
+<header class="admin-topbar">
+    <img src="assets/logo.png" alt="شعار الكلية" class="admin-logo" />
+    <div class="title-block admin-title-block">
+      <h1>إعدادات مؤقت الامتحانات النهائية</h1>
+    </div>
+    <div class="header-date-wrap admin-date-wrap">
+      <div id="dateLine" class="date-line"></div>
+      <div class="header-controls">
+        <a href="#display" class="settings-link home-link" title="صفحة العرض" aria-label="صفحة العرض"><span class="home-icon" aria-hidden="true"></span></a>
+        <button id="fullScreenBtn" class="fullscreen-btn" type="button" title="ملء الشاشة" aria-label="ملء الشاشة">
+          <span class="fs-corners fs-open" aria-hidden="true"></span><span class="fs-corners fs-close hidden" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-shell">
+    <section id="loginPanel" class="admin-card login-card">
+      <h2>رمز الدخول</h2>
+      <p>أدخل رمز الدخول للوصول إلى الإعدادات.</p>
+      <input id="passwordInput" type="password" placeholder="رمز الدخول" />
+      <p id="cloudStatus" class="soft-note cloud-status"></p>
+      <button id="loginBtn" class="primary-btn" type="button">دخول</button>
+      
+    </section>
+
+    <section id="settingsPanel" class="hidden">
+      <section class="admin-card data-management-card">
+        <h2>إدارة ملف الامتحانات</h2>
+        <p>يدعم الملف بالأعمدة: رمز المقرر، اسم المقرر، الشعبة، اليوم، التاريخ، الفترة، عدد الطلاب، القاعة.</p>
+        <p class="soft-note cloud-status"></p>
+        <div class="file-info-grid">
+          <div><span>اسم الملف الحالي</span><strong id="currentFileName">غير محدد</strong></div>
+          <div><span>تاريخ آخر تحديث</span><strong id="currentFileUpdated">غير محدد</strong></div>
+        </div>
+        <label class="file-picker-label">اختيار ملف Excel جديد
+          <input id="excelFile" type="file" accept=".xlsx,.xls" />
+        </label>
+        <p id="pendingFileSummary" class="soft-note"></p>
+        <div class="actions-row">
+          <button id="replaceDataBtn" class="primary-btn" type="button">استبدال البيانات الحالية</button>
+        </div>
+      </section>
+
+      <section class="admin-card grid-two settings-grid">
+        <div>
+          <h2>إعدادات الفصل الدراسي</h2>
+          <label>اختر الفصل الدراسي
+            <select id="semesterSelect">
+              <option value="خريف">خريف</option>
+              <option value="ربيع">ربيع</option>
+              <option value="صيف">صيف</option>
+            </select>
+          </label>
+          <label>العام الأكاديمي
+            <input id="academicYearInput" type="text" placeholder="2025 - 2026" />
+          </label>
+          <button id="saveTermBtn" class="secondary-btn" type="button">حفظ إعدادات الفصل</button>
+        </div>
+        <div>
+          <h2>تغيير الرقم السري</h2>
+          <label>الرقم السري الحالي
+            <input id="currentPassword" type="password" placeholder="الرقم السري الحالي" />
+          </label>
+          <label>الرقم السري الجديد
+            <input id="newPassword" type="password" placeholder="الرقم السري الجديد" />
+          </label>
+          <label>تأكيد الرقم السري الجديد
+            <input id="confirmPassword" type="password" placeholder="تأكيد الرقم السري الجديد" />
+          </label>
+          <button id="savePasswordBtn" class="secondary-btn" type="button">حفظ الرقم السري</button>
+        </div>
+      </section>
+
+
+
+      <section class="admin-card edit-card">
+        <h2>تعديل بيانات الامتحانات</h2>
+        <p>اختر تاريخ الامتحان ثم القاعة، وبعدها يمكنك تعديل القاعة أو عدد الطلبة أو أي بيانات أخرى في السجلات المعروضة.</p>
+        <div class="edit-filters">
+          <label>تاريخ الامتحان
+            <select id="editDateSelect"><option value="">اختر التاريخ</option></select>
+          </label>
+          <label>القاعة
+            <select id="editHallSelect"><option value="">اختر القاعة</option></select>
+          </label>
+        </div>
+        <div id="editRows" class="edit-rows"></div>
+        <div class="actions-row">
+          <button id="saveEditsBtn" class="primary-btn" type="button">حفظ التعديلات</button>
+        </div>
+        <p id="editStatus" class="soft-note"></p>
+      </section>
+
+      <section class="admin-card stats-card">
+        <h2>ملخص البيانات</h2>
+
+        <div class="overview-grid">
+          <div class="overview-card"><span>آخر تحديث للبيانات</span><strong id="statLastUpdate">غير محدد</strong></div>
+          <div class="overview-card"><span>متبقي على نهاية فترة الاختبارات</span><strong id="statDaysRemaining">0 يوم</strong></div>
+        </div>
+
+        <div class="stats-section-title">إحصائية عامة</div>
+        <div class="stats-grid detailed-stats">
+          <div><strong id="statCourses">0</strong><span>عدد المقررات</span></div>
+          <div><strong id="statCimsSections">0</strong><span>عدد الشعب CIMS</span></div>
+          <div><strong id="statSisSections">0</strong><span>عدد الشعب SIS</span></div>
+          <div><strong id="statSections">0</strong><span>إجمالي الشعب</span></div>
+          <div><strong id="statHalls">0</strong><span>عدد القاعات</span></div>
+        </div>
+
+        <div class="stats-section-title">حالة الاختبارات</div>
+        <div class="stats-grid detailed-stats">
+          <div><strong id="statCompleted">0</strong><span>المقررات المنتهية</span></div>
+          <div><strong id="statRunning">0</strong><span>المقررات الجارية</span></div>
+          <div><strong id="statRemaining">0</strong><span>المقررات القادمة</span></div>
+          <div><strong id="statCourseTotal">0</strong><span>إجمالي المقررات</span></div>
+        </div>
+
+        <div class="stats-section-title">اختبارات اليوم</div>
+        <div class="stats-grid detailed-stats">
+          <div><strong id="statTodayExams">0</strong><span>عدد المقررات اليوم</span></div>
+          <div><strong id="statTodaySections">0</strong><span>عدد الشعب اليوم</span></div>
+          <div><strong id="statTodayHalls">0</strong><span>عدد القاعات اليوم</span></div>
+          <div><strong id="statTodayStudents">0</strong><span>إجمالي الطلبة اليوم</span></div>
+          <div><strong id="statTodayCompleted">0</strong><span>منتهية اليوم</span></div>
+          <div><strong id="statTodayRunning">0</strong><span>جارية اليوم</span></div>
+          <div><strong id="statTodayRemaining">0</strong><span>قادمة اليوم</span></div>
+        </div>
+
+        <div class="stats-section-title">القاعات المستخدمة اليوم</div>
+        <div id="todayHallStudents" class="hall-students-stats"></div>
+        <p id="adminStatus" class="soft-note"></p>
+      </section>
+    </section>
+  </main>
+  <footer class="copyright admin-copyright">Dr. Ahmed Arafat © 2026</footer>
+
+
+  </section>
+
+
+  <div id="confirmModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-card">
+      <h2 id="confirmModalTitle">تأكيد</h2>
+      <p id="confirmModalMessage"></p>
+      <div class="modal-actions">
+        <button id="confirmYesBtn" class="primary-btn" type="button">نعم</button>
+        <button id="confirmNoBtn" class="secondary-btn" type="button">لا</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js?v=31"></script>
+  <script src="sample-data.js?v=31"></script>
+  <script src="app.js?v=31"></script>
+</body>
+</html>
