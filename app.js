@@ -8,7 +8,7 @@ const STORE_KEYS = {
   fileName: "finalExamTimer.exams.fileName",
   examsMirror: "examTimerData"
 };
-
+ 
 const DEFAULT_PASSWORD = "1234";
 const FIRESTORE_DOCS = {
   settings: ["settings", "config"],
