@@ -2050,3 +2050,69 @@ button#earlyEndBtn.early-end-btn:hover{background:#FFF7F7!important;border-color
   color:#0B2E6B!important;
   font-weight:800!important;
 }
+
+/* V84: keep absence box fixed in its original position when timer is moved up */
+.exam-view.timer-position-top .absence-summary-card{
+  position:absolute!important;
+  right:0!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  grid-column:auto!important;
+  justify-self:auto!important;
+  height:clamp(56px,7.2vh,76px)!important;
+  min-height:clamp(56px,7.2vh,76px)!important;
+  width:clamp(170px,16vw,260px)!important;
+  min-width:clamp(170px,16vw,260px)!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+}
+.exam-view.timer-position-top .meta-row{
+  position:relative!important;
+}
+@media(max-width:900px){
+  .exam-view.timer-position-top .absence-summary-card{
+    position:static!important;
+    transform:none!important;
+    width:min(330px,92vw)!important;
+    min-width:0!important;
+  }
+}
+
+/* V84: exact centering for early finish X button */
+#earlyEndBtn.early-end-btn,
+button#earlyEndBtn.early-end-btn{
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  min-height:34px!important;
+  max-width:34px!important;
+  max-height:34px!important;
+  flex:0 0 34px!important;
+  padding:0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  font-size:0!important;
+  line-height:0!important;
+  overflow:hidden!important;
+  vertical-align:middle!important;
+}
+#earlyEndBtn.early-end-btn::before,
+button#earlyEndBtn.early-end-btn::before{
+  content:"×"!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  height:100%!important;
+  color:#C62828!important;
+  font-size:24px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  transform:none!important;
+  margin:0!important;
+  padding:0!important;
+}
