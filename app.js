@@ -56,6 +56,8 @@ let attendanceModalShown = false;
 let attendanceSubmitted = false;
 let attendanceSubmitInProgress = false;
 let supportAbsenceRequestsCache = [];
+let supportAttendanceReportsCache = [];
+let attendanceReportsUnsubscribe = null;
 let supportRequestsCache = [];
 let earlyFinishDraft = null;
 let supportWakeInterval = null;
@@ -968,7 +970,50 @@ function getAbsenceRequestsForToday(){
     return d && isSameDay(d, now);
   });
 }
+function attendanceReportDate(report){
+  if (report && report.date) return normalizeDate(report.date);
+  const ms = Number(report?.submittedAtMs || report?.examEndMs || 0);
+  if (!ms) return "";
+  const d = new Date(ms);
+  return normalizeDate(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`);
+}
+function attendanceReportPeriodMatches(report, periodText){
+  if (!periodText) return true;
+  return periodMatchesFilter({ periodText: report?.periodText || "" }, periodText);
+}
+function getAttendanceReportTotalForExams(exams){
+  const list = Array.isArray(exams) ? exams : [];
+  if (!list.length) return 0;
+  const keys = new Set(list.map(e => sectionExamKey(e)));
+  const examDates = new Set(list.map(e => e.date));
+  const periods = new Set(list.map(e => periodKeyForExam(e)).map(normalizePeriodFilterText));
+  let total = 0;
+  (supportAttendanceReportsCache || []).forEach(report => {
+    const reportDate = attendanceReportDate(report);
+    if (reportDate && !examDates.has(reportDate)) return;
+    const periodOk = !periods.size || [...periods].some(p => attendanceReportPeriodMatches(report, p));
+    if (!periodOk) return;
+    if (Array.isArray(report.details) && report.details.length) {
+      report.details.forEach(d => {
+        const key = d.examKey || makeExamKey({
+          "التاريخ": d.examDate || reportDate,
+          "الفترة": d.periodText || report.periodText || "",
+          "القاعة": d.hall || report.hall || "",
+          "رمز المقرر": d.courseCode || "",
+          "الشعبة": d.section || ""
+        });
+        if (keys.has(key)) total += Number(d.absenceCount || 0) || 0;
+      });
+    } else if (report.hall) {
+      const hallMatch = list.some(e => clean(e.hall) === clean(report.hall) && attendanceReportPeriodMatches(report, periodKeyForExam(e)));
+      if (hallMatch) total += Number(report.totalAbsence || 0) || 0;
+    }
+  });
+  return total;
+}
 function getAbsenceTotalForExams(exams){
+  const fromReports = getAttendanceReportTotalForExams(exams);
+  if (fromReports > 0) return fromReports;
   const keys = new Set((exams || []).map(e => sectionExamKey(e)));
   return getAbsenceRequestsForToday().filter(r => keys.has(r.examKey)).reduce((s,r)=>s+(Number(r.absenceCount)||0),0);
 }
@@ -1356,6 +1401,20 @@ function archiveExpiredSupportRequests(snapshot, now = Date.now()){
   });
 }
 
+
+function attachAttendanceReportsListener(){
+  if (attendanceReportsUnsubscribe || !attendanceReportsCollection()) return;
+  attendanceReportsUnsubscribe = attendanceReportsCollection().onSnapshot(snap => {
+    const rows = [];
+    snap.docs.forEach(doc => rows.push({ id: doc.id, ...(doc.data() || {}) }));
+    supportAttendanceReportsCache = rows;
+    updateSupportStats();
+  }, err => console.error(err));
+}
+function detachAttendanceReportsListener(){
+  if (attendanceReportsUnsubscribe) { try { attendanceReportsUnsubscribe(); } catch {} attendanceReportsUnsubscribe = null; }
+}
+
 function attachSupportRequestsListener(){
   if (supportRequestsUnsubscribe || !supportRequestsCollection()) return;
   supportRequestsUnsubscribe = supportRequestsCollection().onSnapshot(snap => {
@@ -1420,12 +1479,14 @@ async function submitAttendanceReport(){
   const inputs = [...document.querySelectorAll('#attendanceRows tr[data-exam-key]')];
   let total = 0;
   const batch = [];
+  const absenceValues = new Map();
   let validationError = "";
   inputs.forEach(tr => {
     if (validationError) return;
     const examKey = tr.dataset.examKey;
     const e = activePeriodExams.find(x => sectionExamKey(x) === examKey);
     const n = Number(tr.querySelector('[data-absence-input]')?.value || 0) || 0;
+    if (e) absenceValues.set(examKey, n);
     if (e && n > Number(e.students || 0)) {
       validationError = `لا يمكن أن يتجاوز عدد الغياب عدد الطلبة المسجلين بالشعبة (${toArabicDigits(e.students)} طالبًا).`;
       return;
@@ -1467,7 +1528,30 @@ async function submitAttendanceReport(){
     if (key) {
       localStorage.setItem(key, "1");
       localStorage.setItem(key + ".total", String(total));
-      await attendanceReportsCollection()?.doc(safeDocId(key)).set({ hall: currentHall, periodText: `${currentPeriod.startText} - ${currentPeriod.endText}`, totalAbsence: total, submittedAtMs: Date.now(), examEndMs: currentPeriod.end.getTime(), sessionId: currentSessionId }, { merge:false });
+      await attendanceReportsCollection()?.doc(safeDocId(key)).set({
+        hall: currentHall,
+        periodText: `${currentPeriod.startText} - ${currentPeriod.endText}`,
+        totalAbsence: total,
+        submittedAtMs: Date.now(),
+        examEndMs: currentPeriod.end.getTime(),
+        sessionId: currentSessionId,
+        date: activePeriodExams[0]?.date || "",
+        details: activePeriodExams.map(e => {
+          const n = Number(absenceValues.get(sectionExamKey(e)) || 0) || 0;
+          return {
+            examKey: sectionExamKey(e),
+            courseName: e.courseName,
+            courseCode: e.courseCode,
+            section: e.section,
+            sectionLabel: getSectionTypeLabel(e.section),
+            hall: e.hall,
+            examDate: e.date,
+            periodText: `${currentPeriod.startText} - ${currentPeriod.endText}`,
+            students: Number(e.students || 0) || 0,
+            absenceCount: n
+          };
+        })
+      }, { merge:false });
     }
     attendanceSubmitted = true;
     document.getElementById("attendanceModal")?.classList.add("hidden");
@@ -3579,7 +3663,8 @@ function showAppPage(){
   updateTopDate();
   updateCopyright();
   if (!isAdmin) adminLogout();
-  if (!isSupport) { detachSupportRequestsListener(); stopSupportWakeMode(); }
+  if (!isSupport) { detachSupportRequestsListener();
+  detachAttendanceReportsListener(); stopSupportWakeMode(); }
   if (!isAdmin && !isSupport) {
     refreshAllExams();
     if (currentHall) renderHall(currentHall);
@@ -3588,6 +3673,7 @@ function showAppPage(){
     if (!isSupportLoggedIn()) { location.hash = "admin"; return; }
     updateSupportStats();
     attachSupportRequestsListener();
+  attachAttendanceReportsListener();
     startSupportWakeMode();
   } else {
     const login = document.getElementById("loginPanel");
